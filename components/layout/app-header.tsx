@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { Shell } from "@/components/layout/shell";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/lib/utils/button-variants";
 import { cn } from "@/lib/utils/cn";
 
 const navLinks = [

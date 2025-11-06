@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import FeatureGrid from "@/components/dashboard/feature-grid";
 import { Shell } from "@/components/layout/shell";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/lib/utils/button-variants";
 import { cn } from "@/lib/utils/cn";
 
 export default function HomePage() {
