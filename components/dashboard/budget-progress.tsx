@@ -5,8 +5,10 @@ interface BudgetProgressProps {
 }
 
 export function BudgetProgress({ label, spent, limit }: BudgetProgressProps) {
-  const percentage = Math.min(100, Math.round((spent / limit) * 100));
-  const statusColor = percentage >= 100 ? "bg-rose-500" : percentage >= 80 ? "bg-amber-500" : "bg-emerald-500";
+  const ratio = limit > 0 ? spent / limit : 0;
+  const percentage = Math.min(100, Math.max(0, Math.round(ratio * 100)));
+  const statusColor =
+    percentage >= 100 ? "bg-rose-500" : percentage >= 80 ? "bg-amber-500" : "bg-emerald-500";
 
   return (
     <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">

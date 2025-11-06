@@ -10,6 +10,17 @@ const credentialsSchema = z.object({
   name: z.string().min(1).optional()
 });
 
+const COOKIE_NAME = "appwrite-session" as const;
+
+function setSessionCookie(secret: string) {
+  cookies().set(COOKIE_NAME, secret, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/"
+  });
+}
+
 export async function registerUser(formData: FormData) {
   const parsed = credentialsSchema.safeParse({
     email: formData.get("email"),
@@ -33,11 +44,7 @@ export async function registerUser(formData: FormData) {
   try {
     await account.create(ID.unique(), email, password, name ?? undefined);
     const session = await account.createEmailSession(email, password);
-    cookies().set("appwrite-session", session.secret, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: true
-    });
+    setSessionCookie(session.secret);
     return { success: true } as const;
   } catch (error) {
     console.error("registerUser", error);
@@ -65,11 +72,7 @@ export async function loginUser(formData: FormData) {
 
   try {
     const session = await account.createEmailSession(email, password);
-    cookies().set("appwrite-session", session.secret, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: true
-    });
+    setSessionCookie(session.secret);
     return { success: true } as const;
   } catch (error) {
     console.error("loginUser", error);
@@ -83,7 +86,7 @@ export async function loginUser(formData: FormData) {
 export async function logoutUser() {
   try {
     await account.deleteSession("current");
-    cookies().delete("appwrite-session");
+    cookies().delete(COOKIE_NAME, { path: "/" });
     return { success: true } as const;
   } catch (error) {
     console.error("logoutUser", error);

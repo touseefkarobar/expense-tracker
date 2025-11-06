@@ -1,7 +1,14 @@
 "use client";
 
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 
-export function ThemeProvider({ children }: { attribute?: string; defaultTheme?: string; enableSystem?: boolean; children: ReactNode; }) {
+type ThemeProviderProps = {
+  attribute?: string;
+  defaultTheme?: string;
+  enableSystem?: boolean;
+  children: ReactNode;
+};
+
+export function ThemeProvider({ children }: ThemeProviderProps) {
   return <>{children}</>;
 }
