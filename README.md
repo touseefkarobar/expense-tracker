@@ -106,35 +106,45 @@ Environment variables required by this starter live in [`.env.example`](./.env.e
    ```
    > If npm registry access is restricted, install packages where you have connectivity, then copy the `node_modules` folder or the generated lockfile back into this workspace.
 2. Copy `.env.example` to `.env.local` and fill in your Appwrite credentials.
-3. Run the development server:
+3. Make sure the Appwrite schema exists:
+   ```bash
+   npm run setup:appwrite
+   ```
+   > Requires the server-side environment variables to be present. The script creates the `expense_tracker` database and all referenced collections if they do not already exist.
+4. Run the development server:
    ```bash
    npm run dev
    ```
-4. Visit [http://localhost:3000](http://localhost:3000) for the marketing page and [http://localhost:3000/dashboard](http://localhost:3000/dashboard) for the demo dashboard.
+5. Visit [http://localhost:3000](http://localhost:3000) for the marketing page and [http://localhost:3000/dashboard](http://localhost:3000/dashboard) for the live wallet dashboard.
 
 ## 9) Project Structure Highlights
 
 ```
 app/
   (auth)/           Auth routes wired to Appwrite server actions.
-  (dashboard)/      Demo dashboard with charts and budget widgets.
-  wallets/          Placeholder view for team management.
+  (dashboard)/      Authenticated dashboard with wallet selector, forms, and analytics.
+  wallets/          Placeholder view for team management (extend with Appwrite Teams).
   reports/          Placeholder view for analytics & exports.
 components/
   dashboard/        UI building blocks for insights, budgets, activity.
   layout/           Shared layout primitives.
   ui/               Tailwind-based design system pieces.
+app/(dashboard)/dashboard/_components/
+                    Dashboard-specific forms & tables wired to server actions.
 lib/
   appwrite-client.ts  Browser-side Appwrite SDK factory.
-  server/             Server-only Appwrite client & auth actions.
+  server/             Server-only Appwrite client, auth, schema & finance services.
 ```
 
 ## 10) Next Steps
 
-- Replace dashboard mocks with live queries from Appwrite Databases (server components or React Query).
-- Implement wallet invitations and role management via Appwrite Teams APIs.
-- Add transaction CRUD forms with validation (React Hook Form + Zod recommended).
-- Expand test coverage with Vitest/RTL for components and Playwright for end-to-end flows.
-- Wire up Appwrite Functions for recurring entries, budget alerts, and CSV import.
+- Map wallets to Appwrite Teams and enforce document-level permissions per role.
+- Add recurring transactions, budget alerts, and CSV import via Appwrite Functions.
+- Extend analytics with historical range filters and charts (month-over-month, category trends).
+- Cover the new server actions and UI flows with Vitest/RTL and Playwright tests.
+
+## 11) Usage Guide
+
+See [USAGE.md](./USAGE.md) for a step-by-step walkthrough of configuring Appwrite, creating wallets, managing categories, and recording transactions.
 
 Happy building!

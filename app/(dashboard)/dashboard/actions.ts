@@ -1,0 +1,204 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+
+import {
+  CreateCategoryInput,
+  CreateTransactionInput,
+  CreateWalletInput,
+  createCategory,
+  createTransaction,
+  createWallet,
+  deleteTransaction
+} from "@/lib/server/finance-service";
+
+export type ActionState = {
+  status: "idle" | "success" | "error";
+  message?: string;
+  fieldErrors?: Record<string, string>;
+};
+
+const initialState: ActionState = { status: "idle" };
+
+const walletSchema = z.object({
+  name: z.string().min(2, "Enter a name with at least 2 characters."),
+  defaultCurrency: z.string().min(3, "Provide a 3-letter currency code."),
+  ownerTeamId: z.string().min(1).optional().or(z.literal("")),
+  monthlyBudget: z
+    .string()
+    .optional()
+    .transform(value => (value ? Number(value) : undefined))
+    .pipe(z.number().nonnegative("Budget must be positive.").optional())
+});
+
+const categorySchema = z.object({
+  walletId: z.string().min(1, "Missing wallet id."),
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  type: z.enum(["expense", "income"], { required_error: "Choose category type." }),
+  color: z.string().optional().or(z.literal("")),
+  icon: z.string().optional().or(z.literal(""))
+});
+
+const transactionSchema = z.object({
+  walletId: z.string().min(1, "Missing wallet id."),
+  type: z.enum(["expense", "income"]),
+  categoryId: z.string().optional().or(z.literal("")).transform(value => value || null),
+  amount: z
+    .string({ required_error: "Amount is required." })
+    .refine(value => !Number.isNaN(Number(value)), { message: "Enter a numeric amount." })
+    .transform(value => Number(value))
+    .refine(value => value > 0, { message: "Amount must be greater than zero." }),
+  occurredAt: z
+    .string()
+    .min(1, "Provide a date.")
+    .refine(value => !Number.isNaN(Date.parse(value)), { message: "Use a valid date/time." })
+    .transform(value => new Date(value).toISOString()),
+  memo: z.string().optional().or(z.literal("")),
+  merchant: z.string().optional().or(z.literal(""))
+});
+
+const deleteTransactionSchema = z.object({
+  walletId: z.string().min(1),
+  transactionId: z.string().min(1)
+});
+
+function mapZodErrors(error: z.ZodError): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const issue of error.issues) {
+    const path = issue.path.join(".") || "form";
+    if (!result[path]) {
+      result[path] = issue.message;
+    }
+  }
+  return result;
+}
+
+export async function createWalletAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = walletSchema.safeParse({
+    name: formData.get("name"),
+    defaultCurrency: formData.get("defaultCurrency"),
+    ownerTeamId: formData.get("ownerTeamId"),
+    monthlyBudget: formData.get("monthlyBudget")
+  });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted fields and retry.",
+      fieldErrors: mapZodErrors(parsed.error)
+    };
+  }
+
+  const input: CreateWalletInput = parsed.data;
+
+  try {
+    await createWallet(input);
+    revalidatePath("/dashboard");
+    return { status: "success", message: `Wallet "${input.name}" created.` };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to create wallet."
+    };
+  }
+}
+
+export async function createCategoryAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = categorySchema.safeParse({
+    walletId: formData.get("walletId"),
+    name: formData.get("name"),
+    type: formData.get("type"),
+    color: formData.get("color"),
+    icon: formData.get("icon")
+  });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted fields and retry.",
+      fieldErrors: mapZodErrors(parsed.error)
+    };
+  }
+
+  const input: CreateCategoryInput = {
+    ...parsed.data,
+    color: parsed.data.color || null,
+    icon: parsed.data.icon || null
+  };
+
+  try {
+    await createCategory(input);
+    revalidatePath("/dashboard");
+    return { status: "success", message: "Category created." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to create category."
+    };
+  }
+}
+
+export async function createTransactionAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = transactionSchema.safeParse({
+    walletId: formData.get("walletId"),
+    type: formData.get("type"),
+    categoryId: formData.get("categoryId"),
+    amount: formData.get("amount"),
+    occurredAt: formData.get("occurredAt"),
+    memo: formData.get("memo"),
+    merchant: formData.get("merchant")
+  });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted fields and retry.",
+      fieldErrors: mapZodErrors(parsed.error)
+    };
+  }
+
+  const input: CreateTransactionInput = {
+    walletId: parsed.data.walletId,
+    type: parsed.data.type,
+    categoryId: parsed.data.categoryId,
+    amount: parsed.data.amount,
+    occurredAt: parsed.data.occurredAt,
+    memo: parsed.data.memo || null,
+    merchant: parsed.data.merchant || null
+  };
+
+  try {
+    await createTransaction(input);
+    revalidatePath("/dashboard");
+    return { status: "success", message: "Transaction recorded." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to save transaction."
+    };
+  }
+}
+
+export async function deleteTransactionAction(formData: FormData): Promise<void> {
+  const parsed = deleteTransactionSchema.safeParse({
+    walletId: formData.get("walletId"),
+    transactionId: formData.get("transactionId")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard");
+  }
+
+  try {
+    await deleteTransaction(parsed.data.walletId, parsed.data.transactionId);
+  } catch (error) {
+    console.error("deleteTransactionAction", error);
+  } finally {
+    revalidatePath("/dashboard");
+    redirect(`/dashboard?wallet=${parsed.data.walletId}`);
+  }
+}
+
+export { initialState };

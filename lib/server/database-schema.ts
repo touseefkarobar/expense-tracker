@@ -77,7 +77,7 @@ export const COLLECTION_SCHEMAS: CollectionSchema[] = [
     attributes: [
       { type: "string", key: "name", size: 128, required: true },
       { type: "string", key: "default_currency", size: 16, required: true },
-      { type: "string", key: "owner_team_id", size: 64, required: true },
+      { type: "string", key: "owner_team_id", size: 64, required: false },
       { type: "float", key: "monthly_budget", required: false, min: 0 }
     ],
     indexes: [
