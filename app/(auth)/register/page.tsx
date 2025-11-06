@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { registerUser } from "@/lib/server/auth-actions";
@@ -9,7 +10,7 @@ interface FormState {
   success: boolean;
 }
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Create account | Shared Wallet Expense Tracker"
 };
 

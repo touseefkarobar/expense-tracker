@@ -1,7 +1,8 @@
+import type { Metadata } from "next";
 import { Shell } from "@/components/layout/shell";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Wallets | Shared Wallet Expense Tracker"
 };
 

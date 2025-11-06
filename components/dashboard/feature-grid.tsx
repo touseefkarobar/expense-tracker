@@ -1,5 +1,11 @@
+import type { LucideIcon } from "lucide-react";
 import { Wallet, Users, BarChart3, ShieldCheck, Zap, CalendarClock } from "lucide-react";
-import { cn } from "@/lib/utils/cn";
+
+type Feature = {
+  title: string;
+  description: string;
+  icon: LucideIcon;
+};
 
 const features = [
   {
@@ -32,21 +38,19 @@ const features = [
     description: "Scheduled functions generate recurring entries and notify budget thresholds.",
     icon: CalendarClock
   }
-];
+] satisfies readonly Feature[];
 
 export default function FeatureGrid() {
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {features.map(feature => (
+      {features.map(({ title, description, icon: Icon }) => (
         <article
-          key={feature.title}
-          className={cn(
-            "group rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-          )}
+          key={title}
+          className="group rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
         >
-          <feature.icon className="mb-4 h-10 w-10 text-brand" />
-          <h3 className="text-lg font-semibold text-slate-900">{feature.title}</h3>
-          <p className="mt-2 text-sm text-slate-600">{feature.description}</p>
+          <Icon aria-hidden="true" className="mb-4 h-10 w-10 text-brand" />
+          <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+          <p className="mt-2 text-sm text-slate-600">{description}</p>
         </article>
       ))}
     </div>

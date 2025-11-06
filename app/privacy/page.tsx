@@ -1,6 +1,7 @@
+import type { Metadata } from "next";
 import { Shell } from "@/components/layout/shell";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Privacy policy | Shared Wallet Expense Tracker"
 };
 
