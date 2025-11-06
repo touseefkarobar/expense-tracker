@@ -8,9 +8,10 @@ import type { WalletDocument } from "@/lib/server/finance-service";
 interface WalletSelectorProps {
   wallets: WalletDocument[];
   activeWalletId: string | null;
+  basePath?: string;
 }
 
-export function WalletSelector({ wallets, activeWalletId }: WalletSelectorProps) {
+export function WalletSelector({ wallets, activeWalletId, basePath = "/dashboard" }: WalletSelectorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -25,7 +26,8 @@ export function WalletSelector({ wallets, activeWalletId }: WalletSelectorProps)
     }
 
     startTransition(() => {
-      router.push(`/dashboard?${params.toString()}`);
+      const query = params.toString();
+      router.push(query ? `${basePath}?${query}` : basePath);
     });
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import {
   attachTeamToWalletAction,
   createWalletTeamAction,
-  inviteTeamMemberAction
+  addTeamMemberAction
 } from "../actions";
 import { initialState } from "../types";
 
@@ -23,32 +23,45 @@ interface WalletTeamManagerProps {
   walletName: string;
   team: { id: string; memberships: Models.Membership[] } | null;
   teamError: string | null;
+  currentUserId: string | null;
 }
 
-function SubmitButton({ label }: { label: string }) {
+function SubmitButton({ label, disabled }: { label: string; disabled?: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
       className={cn(buttonVariants({ variant: "secondary" }), "w-full sm:w-auto")}
-      disabled={pending}
+      disabled={pending || disabled}
     >
       {pending ? "Saving..." : label}
     </button>
   );
 }
 
-export function WalletTeamManager({ walletId, walletName, team, teamError }: WalletTeamManagerProps) {
+interface SearchResult {
+  id: string;
+  email: string;
+  name: string;
+  status: string;
+}
+
+export function WalletTeamManager({ walletId, walletName, team, teamError, currentUserId }: WalletTeamManagerProps) {
   const router = useRouter();
   const [createState, createAction] = useFormState(createWalletTeamAction, initialState);
   const [attachState, attachAction] = useFormState(attachTeamToWalletAction, initialState);
-  const [inviteState, inviteAction] = useFormState(inviteTeamMemberAction, initialState);
+  const [addMemberState, addMemberAction] = useFormState(addTeamMemberAction, initialState);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<SearchResult | null>(null);
 
   useEffect(() => {
-    if (createState.status === "success" || attachState.status === "success" || inviteState.status === "success") {
+    if (createState.status === "success" || attachState.status === "success" || addMemberState.status === "success") {
       router.refresh();
     }
-  }, [createState.status, attachState.status, inviteState.status, router]);
+  }, [createState.status, attachState.status, addMemberState.status, router]);
 
   useEffect(() => {
     if (createState.status === "success") {
@@ -65,18 +78,71 @@ export function WalletTeamManager({ walletId, walletName, team, teamError }: Wal
   }, [attachState.status]);
 
   useEffect(() => {
-    if (inviteState.status === "success") {
-      const form = document.getElementById("invite-team-member-form") as HTMLFormElement | null;
+    if (addMemberState.status === "success") {
+      const form = document.getElementById("add-team-member-form") as HTMLFormElement | null;
       form?.reset();
+      setSearchTerm("");
+      setSearchResults([]);
+      setSelectedUser(null);
     }
-  }, [inviteState.status]);
+  }, [addMemberState.status]);
 
-  const defaultRedirect = useMemo(() => {
-    if (typeof window === "undefined") {
-      return "";
+  const existingUserIds = useMemo(() => {
+    if (!team) {
+      return new Set<string>();
     }
-    return `${window.location.origin}/api/auth/callback`;
-  }, []);
+    const ids = team.memberships
+      .map(member => member.userId)
+      .filter((id): id is string => typeof id === "string" && id.length > 0);
+    return new Set(ids);
+  }, [team]);
+
+  useEffect(() => {
+    if (searchTerm.trim().length < 2) {
+      setSearchResults([]);
+      setSearchError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError(null);
+      try {
+        const response = await fetch(`/api/users/search?query=${encodeURIComponent(searchTerm.trim())}`, {
+          signal: controller.signal
+        });
+
+        if (!response.ok) {
+          const payload = (await response.json().catch(() => ({}))) as { error?: string };
+          throw new Error(payload.error ?? "Unable to search users.");
+        }
+
+        const payload = (await response.json()) as { users: SearchResult[] };
+        const filtered = payload.users.filter(user => {
+          if (existingUserIds.has(user.id)) {
+            return false;
+          }
+          if (currentUserId && user.id === currentUserId) {
+            return false;
+          }
+          return true;
+        });
+        setSearchResults(filtered);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          setSearchError(error instanceof Error ? error.message : "Unable to search users.");
+        }
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchTerm, existingUserIds, currentUserId]);
 
   return (
     <Card>
@@ -96,83 +162,135 @@ export function WalletTeamManager({ walletId, walletName, team, teamError }: Wal
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs uppercase tracking-wide text-slate-500">
               Team ID: <span className="font-mono text-slate-700">{team.id}</span>
             </div>
-            <form id="invite-team-member-form" action={inviteAction} className="space-y-4 rounded-lg border border-slate-200 p-4">
+            <form
+              id="add-team-member-form"
+              action={addMemberAction}
+              className="space-y-4 rounded-lg border border-slate-200 p-4"
+            >
               <input type="hidden" name="walletId" value={walletId} />
+              <input type="hidden" name="userId" value={selectedUser?.id ?? ""} />
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold text-slate-900">Invite a teammate</h3>
+                <h3 className="text-sm font-semibold text-slate-900">Add an existing user</h3>
                 <p className="text-xs text-slate-500">
-                  Appwrite will send them an email with the link you provide below.
+                  Teammates need to sign up before they can be added. Search their email to link them instantly.
                 </p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="invite-email">Email</Label>
+              <div className="space-y-2">
+                <Label htmlFor="team-member-search">Search users</Label>
+                <div className="relative">
                   <Input
-                    id="invite-email"
-                    name="email"
-                    type="email"
-                    placeholder="teammate@email.com"
-                    required
-                    aria-invalid={Boolean(inviteState.fieldErrors?.email)}
+                    id="team-member-search"
+                    name="memberSearch"
+                    autoComplete="off"
+                    placeholder="person@email.com"
+                    value={searchTerm}
+                    onChange={event => {
+                      const value = event.target.value;
+                      setSearchTerm(value);
+                      if (!value) {
+                        setSelectedUser(null);
+                      }
+                    }}
+                    aria-invalid={Boolean(addMemberState.fieldErrors?.userId)}
                   />
-                  {inviteState.fieldErrors?.email ? (
-                    <p className="text-sm text-red-600">{inviteState.fieldErrors.email}</p>
+                  {searchTerm ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setSelectedUser(null);
+                      }}
+                      className="absolute inset-y-0 right-2 flex items-center text-xs font-medium text-slate-500 hover:text-slate-700"
+                    >
+                      Clear
+                    </button>
                   ) : null}
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="invite-name">Name (optional)</Label>
-                  <Input id="invite-name" name="name" placeholder="Teammate name" />
-                  {inviteState.fieldErrors?.name ? (
-                    <p className="text-sm text-red-600">{inviteState.fieldErrors.name}</p>
-                  ) : null}
-                </div>
+                <p className="text-xs text-slate-500">Enter at least two characters to start searching.</p>
+                {searchError ? <p className="text-sm text-red-600">{searchError}</p> : null}
+                {searchTerm.trim().length >= 2 ? (
+                  <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+                    {isSearching ? (
+                      <p className="px-3 py-2 text-sm text-slate-500">Searching…</p>
+                    ) : searchResults.length === 0 ? (
+                      <p className="px-3 py-2 text-sm text-slate-500">No matching users found.</p>
+                    ) : (
+                      <ul className="divide-y divide-slate-100 text-sm">
+                        {searchResults.map(result => (
+                          <li key={result.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedUser(result);
+                                setSearchTerm(result.email);
+                              }}
+                              className={cn(
+                                "flex w-full flex-col items-start gap-1 px-3 py-2 text-left transition hover:bg-slate-50",
+                                selectedUser?.id === result.id ? "bg-slate-100" : "bg-white"
+                              )}
+                            >
+                              <span className="font-medium text-slate-700">{result.name}</span>
+                              <span className="text-xs text-slate-500">{result.email}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ) : null}
+                {addMemberState.fieldErrors?.userId ? (
+                  <p className="text-sm text-red-600">{addMemberState.fieldErrors.userId}</p>
+                ) : null}
+                {selectedUser ? (
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                    Ready to add <span className="font-semibold">{selectedUser.name}</span> ({selectedUser.email})
+                  </div>
+                ) : null}
               </div>
               <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="invite-role">Role</Label>
+                  <Label htmlFor="team-member-role">Role</Label>
                   <select
-                    id="invite-role"
+                    id="team-member-role"
                     name="role"
                     defaultValue="member"
                     className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
-                    aria-invalid={Boolean(inviteState.fieldErrors?.role)}
+                    aria-invalid={Boolean(addMemberState.fieldErrors?.role)}
                   >
                     <option value="owner">Owner</option>
                     <option value="manager">Manager</option>
                     <option value="member">Member</option>
                     <option value="viewer">Viewer</option>
                   </select>
-                  {inviteState.fieldErrors?.role ? (
-                    <p className="text-sm text-red-600">{inviteState.fieldErrors.role}</p>
+                  {addMemberState.fieldErrors?.role ? (
+                    <p className="text-sm text-red-600">{addMemberState.fieldErrors.role}</p>
                   ) : null}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="invite-redirect">Invite link</Label>
-                  <Input
-                    id="invite-redirect"
-                    name="redirectUrl"
-                    type="url"
-                    defaultValue={defaultRedirect}
-                    placeholder="https://your-app.com/auth/callback"
-                    required
-                    aria-invalid={Boolean(inviteState.fieldErrors?.redirectUrl)}
-                  />
-                  {inviteState.fieldErrors?.redirectUrl ? (
-                    <p className="text-sm text-red-600">{inviteState.fieldErrors.redirectUrl}</p>
-                  ) : null}
+                  <Label>Selected user</Label>
+                  <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                    {selectedUser ? (
+                      <>
+                        <span className="block font-medium text-slate-700">{selectedUser.name}</span>
+                        <span className="text-xs text-slate-500">{selectedUser.email}</span>
+                      </>
+                    ) : (
+                      <span>No user selected yet.</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              {inviteState.message ? (
+              {addMemberState.message ? (
                 <p
                   className={cn(
                     "text-sm",
-                    inviteState.status === "error" ? "text-red-600" : "text-emerald-600"
+                    addMemberState.status === "error" ? "text-red-600" : "text-emerald-600"
                   )}
                 >
-                  {inviteState.message}
+                  {addMemberState.message}
                 </p>
               ) : null}
-              <SubmitButton label="Send invite" />
+              <SubmitButton label="Add member" disabled={!selectedUser} />
             </form>
 
             <div className="space-y-3">
@@ -190,7 +308,7 @@ export function WalletTeamManager({ walletId, walletName, team, teamError }: Wal
                     {team.memberships.length === 0 ? (
                       <tr>
                         <td className="px-3 py-3 text-sm text-slate-500" colSpan={3}>
-                          No members yet. Invite your first teammate above.
+                          No members yet. Add your first teammate above.
                         </td>
                       </tr>
                     ) : (

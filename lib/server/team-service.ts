@@ -45,37 +45,23 @@ export async function attachExistingTeamToWallet({ walletId, teamId }: AttachWal
   return linkWalletToTeam(walletId, teamId);
 }
 
-export interface InviteTeamMemberInput {
+export interface AddTeamMemberInput {
   walletId: string;
-  email: string;
-  name?: string | null;
+  userId: string;
   role: string;
-  redirectUrl: string;
 }
 
-export async function inviteTeamMemberToWallet({
-  walletId,
-  email,
-  name,
-  role,
-  redirectUrl
-}: InviteTeamMemberInput) {
+export async function addTeamMemberToWallet({ walletId, userId, role }: AddTeamMemberInput) {
   const wallet = await fetchWallet(walletId);
 
   if (!wallet.owner_team_id) {
-    throw new Error("Link an Appwrite team to this wallet before sending invites.");
+    throw new Error("Link an Appwrite team to this wallet before adding members.");
   }
 
   try {
-    const membership = await teams.createMembership(
-      wallet.owner_team_id,
-      email,
-      [role],
-      redirectUrl,
-      name ?? undefined
-    );
+    const membership = await teams.createMembership(wallet.owner_team_id, [role], undefined, userId);
     return membership;
   } catch (error) {
-    throw new Error(`Unable to send invite: ${formatAppwriteError(error)}`);
+    throw new Error(`Unable to add member: ${formatAppwriteError(error)}`);
   }
 }

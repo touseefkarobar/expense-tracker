@@ -17,6 +17,7 @@ interface CreateTransactionFormProps {
   walletId: string;
   categories: CategoryDocument[];
   currency: string;
+  defaultMerchant?: string;
 }
 
 function SubmitButton() {
@@ -39,7 +40,7 @@ const nowLocal = () => {
   return local.toISOString().slice(0, 16);
 };
 
-export function CreateTransactionForm({ walletId, categories, currency }: CreateTransactionFormProps) {
+export function CreateTransactionForm({ walletId, categories, currency, defaultMerchant }: CreateTransactionFormProps) {
   const router = useRouter();
   const [state, formAction] = useFormState(createTransactionAction, initialState);
   const [transactionType, setTransactionType] = useState<"expense" | "income">("expense");
@@ -53,11 +54,15 @@ export function CreateTransactionForm({ walletId, categories, currency }: Create
       if (occurredAt) {
         occurredAt.value = nowLocal();
       }
+      const merchant = document.getElementById("transaction-merchant") as HTMLInputElement | null;
+      if (merchant) {
+        merchant.value = defaultMerchant ?? "";
+      }
       setTransactionType("expense");
       setSelectedCategory("");
       router.refresh();
     }
-  }, [state.status, router]);
+  }, [state.status, router, defaultMerchant]);
 
   const expenseCategories = categories.filter(category => category.type === "expense");
   const incomeCategories = categories.filter(category => category.type === "income");
@@ -208,8 +213,13 @@ export function CreateTransactionForm({ walletId, categories, currency }: Create
           ) : null}
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="transaction-merchant">Merchant (optional)</Label>
-          <Input id="transaction-merchant" name="merchant" placeholder="Vendor or payer" />
+          <Label htmlFor="transaction-merchant">Merchant or payer</Label>
+          <Input
+            id="transaction-merchant"
+            name="merchant"
+            placeholder="Vendor or payer"
+            defaultValue={defaultMerchant ?? ""}
+          />
           {state.fieldErrors?.merchant ? <p className="text-sm text-red-600">{state.fieldErrors.merchant}</p> : null}
         </div>
       </div>
