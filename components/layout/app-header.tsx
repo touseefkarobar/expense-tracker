@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import Link from "next/link";
 import { Shell } from "@/components/layout/shell";
 import { buttonVariants } from "@/components/ui/button";
@@ -7,7 +8,7 @@ const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/wallets", label: "Wallets" },
   { href: "/reports", label: "Reports" }
-];
+] as const satisfies ReadonlyArray<{ href: Route; label: string }>;
 
 export default function AppHeader() {
   return (

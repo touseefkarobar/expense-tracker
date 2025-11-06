@@ -1,3 +1,5 @@
+import { IndexType } from "node-appwrite";
+
 export const DATABASE_ID = "expense_tracker" as const;
 export const DATABASE_NAME = "Expense Tracker" as const;
 
@@ -52,7 +54,7 @@ export type AttributeDefinition =
 
 export type IndexDefinition = {
   key: string;
-  type: "key" | "fulltext" | "unique";
+  type: IndexType;
   attributes: string[];
   orders?: Array<"ASC" | "DESC">;
 };
@@ -81,7 +83,7 @@ export const COLLECTION_SCHEMAS: CollectionSchema[] = [
     indexes: [
       {
         key: "idx_owner_team",
-        type: "key",
+        type: IndexType.Key,
         attributes: ["owner_team_id"],
         orders: ["ASC"]
       }
@@ -107,13 +109,13 @@ export const COLLECTION_SCHEMAS: CollectionSchema[] = [
     indexes: [
       {
         key: "idx_wallet",
-        type: "key",
+        type: IndexType.Key,
         attributes: ["wallet_id"],
         orders: ["ASC"]
       },
       {
         key: "idx_wallet_user",
-        type: "unique",
+        type: IndexType.Unique,
         attributes: ["wallet_id", "user_id"],
         orders: ["ASC", "ASC"]
       }
@@ -150,13 +152,13 @@ export const COLLECTION_SCHEMAS: CollectionSchema[] = [
     indexes: [
       {
         key: "idx_wallet",
-        type: "key",
+        type: IndexType.Key,
         attributes: ["wallet_id"],
         orders: ["ASC"]
       },
       {
         key: "idx_wallet_date",
-        type: "key",
+        type: IndexType.Key,
         attributes: ["wallet_id", "occurred_at"],
         orders: ["ASC", "DESC"]
       }
@@ -183,7 +185,7 @@ export const COLLECTION_SCHEMAS: CollectionSchema[] = [
     indexes: [
       {
         key: "idx_wallet",
-        type: "key",
+        type: IndexType.Key,
         attributes: ["wallet_id"],
         orders: ["ASC"]
       }
@@ -210,7 +212,7 @@ export const COLLECTION_SCHEMAS: CollectionSchema[] = [
     indexes: [
       {
         key: "idx_wallet",
-        type: "key",
+        type: IndexType.Key,
         attributes: ["wallet_id"],
         orders: ["ASC"]
       }
@@ -236,13 +238,13 @@ export const COLLECTION_SCHEMAS: CollectionSchema[] = [
     indexes: [
       {
         key: "idx_wallet",
-        type: "key",
+        type: IndexType.Key,
         attributes: ["wallet_id"],
         orders: ["ASC"]
       },
       {
         key: "idx_wallet_next_run",
-        type: "key",
+        type: IndexType.Key,
         attributes: ["wallet_id", "next_run_at"],
         orders: ["ASC", "ASC"]
       }
@@ -263,13 +265,13 @@ export const COLLECTION_SCHEMAS: CollectionSchema[] = [
     indexes: [
       {
         key: "idx_wallet",
-        type: "key",
+        type: IndexType.Key,
         attributes: ["wallet_id"],
         orders: ["ASC"]
       },
       {
         key: "idx_wallet_created",
-        type: "key",
+        type: IndexType.Key,
         attributes: ["wallet_id", "created_at"],
         orders: ["ASC", "DESC"]
       }

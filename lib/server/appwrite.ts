@@ -1,4 +1,4 @@
-import { Account, Client, Databases, Functions, ID, Storage, Teams } from "appwrite";
+import { Account, Client, Databases, Functions, ID, Storage, Teams } from "node-appwrite";
 import { env } from "@/lib/env";
 
 export const serverClient = new Client()

@@ -1,4 +1,4 @@
-import { AppwriteException } from "appwrite";
+import { AppwriteException } from "node-appwrite";
 
 import { databases } from "./appwrite";
 import {

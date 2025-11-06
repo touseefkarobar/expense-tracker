@@ -43,7 +43,10 @@ export async function registerUser(formData: FormData) {
 
   try {
     await account.create(ID.unique(), email, password, name ?? undefined);
-    const session = await account.createEmailSession(email, password);
+    const session = await account.createEmailPasswordSession(email, password);
+    if (!session.secret) {
+      throw new Error("Appwrite session secret was not returned.");
+    }
     setSessionCookie(session.secret);
     return { success: true } as const;
   } catch (error) {
@@ -71,7 +74,10 @@ export async function loginUser(formData: FormData) {
   const { email, password } = parsed.data;
 
   try {
-    const session = await account.createEmailSession(email, password);
+    const session = await account.createEmailPasswordSession(email, password);
+    if (!session.secret) {
+      throw new Error("Appwrite session secret was not returned.");
+    }
     setSessionCookie(session.secret);
     return { success: true } as const;
   } catch (error) {
@@ -86,7 +92,7 @@ export async function loginUser(formData: FormData) {
 export async function logoutUser() {
   try {
     await account.deleteSession("current");
-    cookies().delete(COOKIE_NAME, { path: "/" });
+    cookies().delete({ name: COOKIE_NAME, path: "/" });
     return { success: true } as const;
   } catch (error) {
     console.error("logoutUser", error);
