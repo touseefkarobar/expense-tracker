@@ -13,11 +13,7 @@ import {
   createWallet,
   deleteTransaction
 } from "@/lib/server/finance-service";
-import {
-  attachExistingTeamToWallet,
-  createTeamForWallet,
-  inviteTeamMemberToWallet
-} from "@/lib/server/team-service";
+import { addTeamMemberToWallet, attachExistingTeamToWallet, createTeamForWallet } from "@/lib/server/team-service";
 import type { ActionState } from "./types";
 
 const walletSchema = z.object({
@@ -78,14 +74,12 @@ const attachTeamSchema = z.object({
   teamId: z.string().min(1, "Enter an Appwrite team ID.")
 });
 
-const inviteMemberSchema = z.object({
+const addMemberSchema = z.object({
   walletId: z.string().min(1, "Missing wallet id."),
-  email: z.string().email("Enter a valid email address."),
-  name: z.string().optional().or(z.literal("")),
+  userId: z.string().min(1, "Select a user."),
   role: z.enum(["owner", "manager", "member", "viewer"], {
     required_error: "Choose a role."
-  }),
-  redirectUrl: z.string().url("Provide a valid invite URL.")
+  })
 });
 
 function mapZodErrors(error: z.ZodError): Record<string, string> {
@@ -120,6 +114,7 @@ export async function createWalletAction(_: ActionState, formData: FormData): Pr
   try {
     await createWallet(input);
     revalidatePath("/dashboard");
+    revalidatePath("/wallets");
     return { status: "success", message: `Wallet "${input.name}" created.` };
   } catch (error) {
     return {
@@ -155,6 +150,7 @@ export async function createCategoryAction(_: ActionState, formData: FormData): 
   try {
     await createCategory(input);
     revalidatePath("/dashboard");
+    revalidatePath("/reports");
     return { status: "success", message: "Category created." };
   } catch (error) {
     return {
@@ -196,6 +192,7 @@ export async function createTransactionAction(_: ActionState, formData: FormData
   try {
     await createTransaction(input);
     revalidatePath("/dashboard");
+    revalidatePath("/reports");
     return { status: "success", message: "Transaction recorded." };
   } catch (error) {
     return {
@@ -221,6 +218,7 @@ export async function deleteTransactionAction(formData: FormData): Promise<void>
     console.error("deleteTransactionAction", error);
   } finally {
     revalidatePath("/dashboard");
+    revalidatePath("/reports");
     redirect(`/dashboard?wallet=${parsed.data.walletId}`);
   }
 }
@@ -242,6 +240,7 @@ export async function createWalletTeamAction(_: ActionState, formData: FormData)
   try {
     await createTeamForWallet(parsed.data);
     revalidatePath("/dashboard");
+    revalidatePath("/wallets");
     return { status: "success", message: "Team created and linked to wallet." };
   } catch (error) {
     return {
@@ -268,6 +267,7 @@ export async function attachTeamToWalletAction(_: ActionState, formData: FormDat
   try {
     await attachExistingTeamToWallet(parsed.data);
     revalidatePath("/dashboard");
+    revalidatePath("/wallets");
     return { status: "success", message: "Team linked to wallet." };
   } catch (error) {
     return {
@@ -277,13 +277,11 @@ export async function attachTeamToWalletAction(_: ActionState, formData: FormDat
   }
 }
 
-export async function inviteTeamMemberAction(_: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = inviteMemberSchema.safeParse({
+export async function addTeamMemberAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = addMemberSchema.safeParse({
     walletId: formData.get("walletId"),
-    email: formData.get("email"),
-    name: formData.get("name"),
-    role: formData.get("role"),
-    redirectUrl: formData.get("redirectUrl")
+    userId: formData.get("userId"),
+    role: formData.get("role")
   });
 
   if (!parsed.success) {
@@ -295,19 +293,14 @@ export async function inviteTeamMemberAction(_: ActionState, formData: FormData)
   }
 
   try {
-    await inviteTeamMemberToWallet({
-      walletId: parsed.data.walletId,
-      email: parsed.data.email,
-      name: parsed.data.name || null,
-      role: parsed.data.role,
-      redirectUrl: parsed.data.redirectUrl
-    });
+    await addTeamMemberToWallet(parsed.data);
     revalidatePath("/dashboard");
-    return { status: "success", message: "Invite sent." };
+    revalidatePath("/wallets");
+    return { status: "success", message: "Team member added." };
   } catch (error) {
     return {
       status: "error",
-      message: error instanceof Error ? error.message : "Unable to send invite."
+      message: error instanceof Error ? error.message : "Unable to add member."
     };
   }
 }

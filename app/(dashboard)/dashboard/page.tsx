@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Shell } from "@/components/layout/shell";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { getDashboardSnapshot, type DashboardSnapshot } from "@/lib/server/finance-service";
+import { getCurrentAccount } from "@/lib/server/session";
 import { CategorySummary } from "./_components/category-summary";
 import { CreateCategoryForm } from "./_components/create-category-form";
 import { CreateTransactionForm } from "./_components/create-transaction-form";
@@ -28,9 +29,19 @@ interface DashboardPageProps {
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   let snapshot: DashboardSnapshot;
   let loadError: string | null = null;
+  let currentUser: { id: string | null; displayName: string | null } = { id: null, displayName: null };
 
   try {
-    snapshot = await getDashboardSnapshot(searchParams.wallet);
+    const [account, snapshotResult] = await Promise.all([
+      getCurrentAccount(),
+      getDashboardSnapshot(searchParams.wallet)
+    ]);
+    snapshot = snapshotResult;
+    const derivedName = account?.name?.trim() || null;
+    currentUser = {
+      id: account?.$id ?? null,
+      displayName: derivedName && derivedName.length > 0 ? derivedName : account?.email ?? null
+    };
   } catch (error) {
     loadError =
       error instanceof Error
@@ -51,6 +62,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const activeWallet =
     snapshot.wallets.find(wallet => wallet.$id === snapshot.activeWalletId) ?? snapshot.wallets[0] ?? null;
   const currency = activeWallet?.default_currency ?? "USD";
+  const currentUserName = currentUser.displayName ?? null;
 
   return (
     <Shell className="space-y-10 py-12">
@@ -111,6 +123,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <>
           <StatsGrid totals={snapshot.totals} currency={currency} />
 
+          <Card className="border-dashed border-slate-200 bg-slate-50/60">
+            <CardHeader>
+              <h2 className="text-lg font-semibold text-slate-900">Create another wallet</h2>
+              <p className="text-sm text-slate-600">
+                Spinning up additional wallets keeps household, travel, or business spending organised. Switch between them
+                anytime using the selector above.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <CreateWalletForm />
+            </CardContent>
+          </Card>
+
           <section className="grid gap-6 ">
             <Card>
               <CardHeader>
@@ -124,6 +149,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   walletId={snapshot.activeWalletId!}
                   categories={snapshot.categories}
                   currency={currency}
+                  defaultMerchant={currentUserName ?? undefined}
                 />
               </CardContent>
             </Card>
@@ -179,6 +205,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 walletName={activeWallet?.name ?? "Wallet"}
                 team={snapshot.team}
                 teamError={snapshot.teamError}
+                currentUserId={currentUser.id}
               />
             </div>
           </section>

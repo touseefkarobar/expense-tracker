@@ -10,10 +10,10 @@ const credentialsSchema = z.object({
   name: z.string().min(1).optional()
 });
 
-const COOKIE_NAME = "appwrite-session" as const;
+export const SESSION_COOKIE_NAME = "appwrite-session" as const;
 
 function setSessionCookie(secret: string) {
-  cookies().set(COOKIE_NAME, secret, {
+  cookies().set(SESSION_COOKIE_NAME, secret, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -92,7 +92,7 @@ export async function loginUser(formData: FormData) {
 export async function logoutUser() {
   try {
     await account.deleteSession("current");
-    cookies().delete({ name: COOKIE_NAME, path: "/" });
+    cookies().delete({ name: SESSION_COOKIE_NAME, path: "/" });
     return { success: true } as const;
   } catch (error) {
     console.error("logoutUser", error);
