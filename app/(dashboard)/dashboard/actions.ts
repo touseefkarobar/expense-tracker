@@ -13,14 +13,7 @@ import {
   createWallet,
   deleteTransaction
 } from "@/lib/server/finance-service";
-
-export type ActionState = {
-  status: "idle" | "success" | "error";
-  message?: string;
-  fieldErrors?: Record<string, string>;
-};
-
-const initialState: ActionState = { status: "idle" };
+import type { ActionState } from "./types";
 
 const walletSchema = z.object({
   name: z.string().min(2, "Enter a name with at least 2 characters."),
@@ -200,5 +193,3 @@ export async function deleteTransactionAction(formData: FormData): Promise<void>
     redirect(`/dashboard?wallet=${parsed.data.walletId}`);
   }
 }
-
-export { initialState };

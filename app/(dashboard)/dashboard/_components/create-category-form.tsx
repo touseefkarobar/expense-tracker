@@ -8,7 +8,8 @@ import { buttonVariants } from "@/lib/utils/button-variants";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createCategoryAction, initialState } from "../actions";
+import { createCategoryAction } from "../actions";
+import { initialState } from "../types";
 
 interface CreateCategoryFormProps {
   walletId: string;

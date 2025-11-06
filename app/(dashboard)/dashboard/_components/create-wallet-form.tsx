@@ -8,7 +8,8 @@ import { buttonVariants } from "@/lib/utils/button-variants";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createWalletAction, initialState } from "../actions";
+import { createWalletAction } from "../actions";
+import { initialState } from "../types";
 
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();

@@ -206,7 +206,7 @@ export const COLLECTION_SCHEMAS: CollectionSchema[] = [
         required: true
       },
       { type: "float", key: "limit", required: true, min: 0 },
-      { type: "boolean", key: "rollover", required: true, default: false },
+      { type: "boolean", key: "rollover", required: false, default: false },
       { type: "integer", key: "alert_thresholds", array: true, required: false }
     ],
     indexes: [

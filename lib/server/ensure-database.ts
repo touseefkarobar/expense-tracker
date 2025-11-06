@@ -81,7 +81,7 @@ async function ensureAttribute(collectionId: string, attribute: AttributeDefinit
         attribute.key,
         attribute.size,
         attribute.required ?? false,
-        attribute.default ?? undefined,
+        attribute.required ? undefined : (attribute.default ?? undefined),
         attribute.array ?? false
       );
       break;
@@ -92,7 +92,7 @@ async function ensureAttribute(collectionId: string, attribute: AttributeDefinit
         attribute.key,
         attribute.elements,
         attribute.required ?? false,
-        attribute.default ?? undefined,
+        attribute.required ? undefined : (attribute.default ?? undefined),
         attribute.array ?? false
       );
       break;
@@ -104,7 +104,7 @@ async function ensureAttribute(collectionId: string, attribute: AttributeDefinit
         attribute.required ?? false,
         attribute.min ?? undefined,
         attribute.max ?? undefined,
-        attribute.default ?? undefined,
+        attribute.required ? undefined : (attribute.default ?? undefined),
         attribute.array ?? false
       );
       break;
@@ -116,7 +116,7 @@ async function ensureAttribute(collectionId: string, attribute: AttributeDefinit
         attribute.required ?? false,
         attribute.min ?? undefined,
         attribute.max ?? undefined,
-        attribute.default ?? undefined,
+        attribute.required ? undefined : (attribute.default ?? undefined),
         attribute.array ?? false
       );
       break;
@@ -126,7 +126,7 @@ async function ensureAttribute(collectionId: string, attribute: AttributeDefinit
         collectionId,
         attribute.key,
         attribute.required ?? false,
-        attribute.default ?? undefined
+        attribute.required ? undefined : (attribute.default ?? undefined)
       );
       break;
     case "datetime":
@@ -135,7 +135,7 @@ async function ensureAttribute(collectionId: string, attribute: AttributeDefinit
         collectionId,
         attribute.key,
         attribute.required ?? false,
-        attribute.default ?? undefined,
+        attribute.required ? undefined : (attribute.default ?? undefined),
         attribute.array ?? false
       );
       break;
