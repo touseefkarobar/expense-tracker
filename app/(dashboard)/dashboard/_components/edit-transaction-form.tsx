@@ -4,23 +4,24 @@ import { useEffect, useMemo, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 
-import type { CategoryDocument } from "@/lib/server/finance-service";
+import type { CategoryDocument, TransactionDocument } from "@/lib/server/finance-service";
 import { buttonVariants } from "@/lib/utils/button-variants";
 import { cn } from "@/lib/utils/cn";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createTransactionAction } from "../actions";
+import { updateTransactionAction } from "../actions";
 import { initialState } from "../types";
 import { getCategoryIcon } from "./category-metadata";
 
-interface CreateTransactionFormProps {
+interface EditTransactionFormProps {
   walletId: string;
-  categories: CategoryDocument[];
   currency: string;
-  defaultMerchant?: string;
+  categories: CategoryDocument[];
+  transaction: TransactionDocument & { categoryName: string | null };
+  onClose: () => void;
 }
 
-function SubmitButton() {
+function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
     <button
@@ -28,47 +29,30 @@ function SubmitButton() {
       className={cn(buttonVariants({ variant: "primary" }), "w-full sm:w-auto")}
       disabled={pending}
     >
-      {pending ? "Saving..." : "Record transaction"}
+      {pending ? "Saving..." : label}
     </button>
   );
 }
 
-const todayLocal = () => {
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-  const local = new Date(now.getTime() - offset * 60000);
-  return local.toISOString().slice(0, 10);
-};
+const toDateInput = (value: string) => value.slice(0, 10);
 
-export function CreateTransactionForm({ walletId, categories, currency, defaultMerchant }: CreateTransactionFormProps) {
+export function EditTransactionForm({ walletId, currency, categories, transaction, onClose }: EditTransactionFormProps) {
   const router = useRouter();
-  const [state, formAction] = useFormState(createTransactionAction, initialState);
-  const [transactionType, setTransactionType] = useState<"expense" | "income">("expense");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [state, formAction] = useFormState(updateTransactionAction, initialState);
+  const [transactionType, setTransactionType] = useState<"expense" | "income">(transaction.type);
+  const [selectedCategory, setSelectedCategory] = useState<string>(transaction.category_id ?? "");
+
+  const expenseCategories = useMemo(() => categories.filter(category => category.type === "expense"), [categories]);
+  const incomeCategories = useMemo(() => categories.filter(category => category.type === "income"), [categories]);
+
+  const visibleCategories = transactionType === "income" ? incomeCategories : expenseCategories;
 
   useEffect(() => {
     if (state.status === "success") {
-      const form = document.getElementById("create-transaction-form") as HTMLFormElement | null;
-      form?.reset();
-      const occurredAt = document.getElementById("transaction-occurred-at") as HTMLInputElement | null;
-      if (occurredAt) {
-        occurredAt.value = todayLocal();
-      }
-      const merchant = document.getElementById("transaction-merchant") as HTMLInputElement | null;
-      if (merchant) {
-        merchant.value = defaultMerchant ?? "";
-      }
-      setTransactionType("expense");
-      setSelectedCategory("");
       router.refresh();
+      onClose();
     }
-  }, [state.status, router, defaultMerchant]);
-
-  const expenseCategories = categories.filter(category => category.type === "expense");
-  const incomeCategories = categories.filter(category => category.type === "income");
-  const visibleCategories = useMemo(() => {
-    return transactionType === "income" ? incomeCategories : expenseCategories;
-  }, [transactionType, incomeCategories, expenseCategories]);
+  }, [state.status, onClose, router]);
 
   useEffect(() => {
     if (!selectedCategory) {
@@ -80,27 +64,22 @@ export function CreateTransactionForm({ walletId, categories, currency, defaultM
     }
   }, [transactionType, categories, selectedCategory]);
 
+  const dateValue = toDateInput(transaction.occurred_at);
+
   return (
-    <form id="create-transaction-form" action={formAction} className="space-y-6">
+    <form action={formAction} className="space-y-6">
+      <input type="hidden" name="transactionId" value={transaction.$id} />
       <input type="hidden" name="walletId" value={walletId} />
       <input type="hidden" name="type" value={transactionType} />
       <input type="hidden" name="categoryId" value={selectedCategory} />
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
           <Label>Type</Label>
           <div className="grid gap-2 sm:grid-cols-2">
             {(
               [
-                {
-                  value: "expense" as const,
-                  title: "Expense",
-                  description: "Money leaving the wallet"
-                },
-                {
-                  value: "income" as const,
-                  title: "Income",
-                  description: "Money coming into the wallet"
-                }
+                { value: "expense" as const, label: "Expense", description: "Money leaving the wallet" },
+                { value: "income" as const, label: "Income", description: "Money coming into the wallet" }
               ]
             ).map(option => (
               <button
@@ -115,7 +94,7 @@ export function CreateTransactionForm({ walletId, categories, currency, defaultM
                 )}
                 aria-pressed={option.value === transactionType}
               >
-                <span className="text-sm font-semibold">{option.title}</span>
+                <span className="text-sm font-semibold">{option.label}</span>
                 <p className="mt-1 text-xs text-current/80">{option.description}</p>
               </button>
             ))}
@@ -123,22 +102,21 @@ export function CreateTransactionForm({ walletId, categories, currency, defaultM
           {state.fieldErrors?.type ? <p className="text-sm text-red-600">{state.fieldErrors.type}</p> : null}
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="transaction-amount">Amount ({currency})</Label>
+          <Label htmlFor={`transaction-amount-${transaction.$id}`}>Amount ({currency})</Label>
           <div className="flex items-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm focus-within:ring-2 focus-within:ring-brand focus-within:ring-offset-1">
             <span className="px-3 text-sm font-medium text-slate-500">{currency}</span>
             <Input
-              id="transaction-amount"
+              id={`transaction-amount-${transaction.$id}`}
               name="amount"
               type="number"
               min="0"
               step="0.01"
-              placeholder="42.50"
+              defaultValue={transaction.amount}
               required
               aria-invalid={Boolean(state.fieldErrors?.amount)}
               className="flex-1 border-0 focus-visible:ring-0"
             />
           </div>
-          <p className="text-xs text-slate-500">Enter the exact total including taxes or reimbursements.</p>
           {state.fieldErrors?.amount ? <p className="text-sm text-red-600">{state.fieldErrors.amount}</p> : null}
         </div>
       </div>
@@ -178,9 +156,7 @@ export function CreateTransactionForm({ walletId, categories, currency, defaultM
                 style={{
                   borderColor: selectedCategory === category.$id && category.color ? category.color : undefined,
                   backgroundColor:
-                    selectedCategory === category.$id && category.color
-                      ? `${category.color}15`
-                      : undefined
+                    selectedCategory === category.$id && category.color ? `${category.color}15` : undefined
                 }}
                 aria-pressed={selectedCategory === category.$id}
               >
@@ -199,35 +175,34 @@ export function CreateTransactionForm({ walletId, categories, currency, defaultM
       </div>
       <div className="grid gap-2 sm:grid-cols-2 sm:gap-4">
         <div className="grid gap-2">
-          <Label htmlFor="transaction-occurred-at">Date</Label>
+          <Label htmlFor={`transaction-occurred-${transaction.$id}`}>Date</Label>
           <Input
-            id="transaction-occurred-at"
+            id={`transaction-occurred-${transaction.$id}`}
             name="occurredAt"
             type="date"
-            defaultValue={todayLocal()}
+            defaultValue={dateValue}
             required
             aria-invalid={Boolean(state.fieldErrors?.occurredAt)}
           />
-          {state.fieldErrors?.occurredAt ? (
-            <p className="text-sm text-red-600">{state.fieldErrors.occurredAt}</p>
-          ) : null}
+          {state.fieldErrors?.occurredAt ? <p className="text-sm text-red-600">{state.fieldErrors.occurredAt}</p> : null}
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="transaction-merchant">Merchant or payer</Label>
+          <Label htmlFor={`transaction-merchant-${transaction.$id}`}>Merchant or payer</Label>
           <Input
-            id="transaction-merchant"
+            id={`transaction-merchant-${transaction.$id}`}
             name="merchant"
+            defaultValue={transaction.merchant ?? ""}
             placeholder="Vendor or payer"
-            defaultValue={defaultMerchant ?? ""}
           />
           {state.fieldErrors?.merchant ? <p className="text-sm text-red-600">{state.fieldErrors.merchant}</p> : null}
         </div>
       </div>
       <div className="grid gap-2">
-        <Label htmlFor="transaction-memo">Memo (optional)</Label>
+        <Label htmlFor={`transaction-memo-${transaction.$id}`}>Memo (optional)</Label>
         <textarea
-          id="transaction-memo"
+          id={`transaction-memo-${transaction.$id}`}
           name="memo"
+          defaultValue={transaction.memo ?? ""}
           className="min-h-[96px] w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
           placeholder="Where did this transaction come from? Share details for the team."
         />
@@ -245,7 +220,16 @@ export function CreateTransactionForm({ walletId, categories, currency, defaultM
           {state.message}
         </div>
       ) : null}
-      <SubmitButton />
+      <div className="flex flex-wrap items-center gap-3">
+        <SubmitButton label="Save changes" />
+        <button
+          type="button"
+          onClick={onClose}
+          className={cn(buttonVariants({ variant: "ghost" }), "text-slate-600 hover:text-slate-900")}
+        >
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }

@@ -1,16 +1,32 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Baby,
   Briefcase,
+  Bus,
+  Car,
+  Coins,
+  Dog,
+  Dumbbell,
+  Fuel,
   Gift,
   GraduationCap,
+  Hammer,
   HeartPulse,
+  Home,
   Music4,
+  Palette,
   PiggyBank,
   Plane,
+  ShoppingCart,
   ShoppingBag,
+  Sprout,
   Tag,
+  TrainFront,
+  Trees,
+  Tv,
   UtensilsCrossed,
-  Wallet
+  Wallet,
+  Wine
 } from "lucide-react";
 
 export const CATEGORY_COLOR_SWATCHES = [
@@ -42,7 +58,23 @@ export const CATEGORY_ICON_OPTIONS: CategoryIconOption[] = [
   { value: "work", label: "Work", icon: Briefcase },
   { value: "education", label: "Education", icon: GraduationCap },
   { value: "entertainment", label: "Entertainment", icon: Music4 },
-  { value: "gifts", label: "Gifts", icon: Gift }
+  { value: "gifts", label: "Gifts", icon: Gift },
+  { value: "home", label: "Home", icon: Home },
+  { value: "transport", label: "Transport", icon: Bus },
+  { value: "car", label: "Car", icon: Car },
+  { value: "fuel", label: "Fuel", icon: Fuel },
+  { value: "pets", label: "Pets", icon: Dog },
+  { value: "baby", label: "Baby", icon: Baby },
+  { value: "fitness", label: "Fitness", icon: Dumbbell },
+  { value: "repairs", label: "Repairs", icon: Hammer },
+  { value: "groceries", label: "Groceries", icon: ShoppingCart },
+  { value: "nature", label: "Outdoors", icon: Trees },
+  { value: "investing", label: "Investing", icon: Coins },
+  { value: "growing", label: "Garden", icon: Sprout },
+  { value: "art", label: "Creativity", icon: Palette },
+  { value: "media", label: "Media", icon: Tv },
+  { value: "train", label: "Train", icon: TrainFront },
+  { value: "wine", label: "Wine", icon: Wine }
 ];
 
 export const CATEGORY_ICON_MAP = CATEGORY_ICON_OPTIONS.reduce<Record<string, LucideIcon>>((acc, option) => {

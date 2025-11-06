@@ -25,7 +25,7 @@ function SubmitButton() {
   return (
     <button
       type="submit"
-      className={cn(buttonVariants({ variant: "subtle" }), "w-full sm:w-auto")}
+      className={cn(buttonVariants({ variant: "primary" }), "w-full sm:w-auto")}
       disabled={pending}
     >
       {pending ? "Saving..." : "Add category"}
@@ -39,8 +39,18 @@ export function CreateCategoryForm({ walletId }: CreateCategoryFormProps) {
   const [categoryType, setCategoryType] = useState<"expense" | "income">("expense");
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [selectedIcon, setSelectedIcon] = useState<string>("");
+  const [iconQuery, setIconQuery] = useState<string>("");
 
   const SelectedIcon = useMemo(() => getCategoryIcon(selectedIcon), [selectedIcon]);
+  const filteredIcons = useMemo(() => {
+    const query = iconQuery.trim().toLowerCase();
+    if (!query) {
+      return CATEGORY_ICON_OPTIONS;
+    }
+    return CATEGORY_ICON_OPTIONS.filter(option =>
+      option.label.toLowerCase().includes(query) || option.value.toLowerCase().includes(query)
+    );
+  }, [iconQuery]);
 
   useEffect(() => {
     if (state.status === "success") {
@@ -49,6 +59,7 @@ export function CreateCategoryForm({ walletId }: CreateCategoryFormProps) {
       setCategoryType("expense");
       setSelectedColor("");
       setSelectedIcon("");
+      setIconQuery("");
       router.refresh();
     }
   }, [state.status, router]);
@@ -143,6 +154,12 @@ export function CreateCategoryForm({ walletId }: CreateCategoryFormProps) {
       </div>
       <div className="grid gap-2">
         <Label>Icon</Label>
+        <Input
+          placeholder="Search icons by name"
+          value={iconQuery}
+          onChange={event => setIconQuery(event.target.value)}
+          className="w-full"
+        />
         <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
           <button
             type="button"
@@ -156,7 +173,7 @@ export function CreateCategoryForm({ walletId }: CreateCategoryFormProps) {
           >
             None
           </button>
-          {CATEGORY_ICON_OPTIONS.map(option => {
+          {filteredIcons.map(option => {
             const Icon = option.icon;
             return (
               <button
@@ -177,6 +194,9 @@ export function CreateCategoryForm({ walletId }: CreateCategoryFormProps) {
             );
           })}
         </div>
+        {filteredIcons.length === 0 ? (
+          <p className="text-xs text-amber-600">No icons found. Try a different keyword.</p>
+        ) : null}
         <p className="text-xs text-slate-500">Icons make categories instantly recognizable when logging transactions.</p>
         {state.fieldErrors?.icon ? <p className="text-sm text-red-600">{state.fieldErrors.icon}</p> : null}
       </div>

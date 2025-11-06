@@ -26,12 +26,25 @@ interface WalletTeamManagerProps {
   currentUserId: string | null;
 }
 
+const formatMembershipRole = (roles: string[]) => {
+  if (roles.includes("owner")) {
+    return "Owner";
+  }
+  if (roles.includes("member")) {
+    return "Member";
+  }
+  if (roles.includes("viewer")) {
+    return "Viewer";
+  }
+  return roles.join(", ") || "Member";
+};
+
 function SubmitButton({ label, disabled }: { label: string; disabled?: boolean }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      className={cn(buttonVariants({ variant: "secondary" }), "w-full sm:w-auto")}
+      className={cn(buttonVariants({ variant: "primary" }), "w-full sm:w-auto")}
       disabled={pending || disabled}
     >
       {pending ? "Saving..." : label}
@@ -57,11 +70,28 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<SearchResult | null>(null);
 
+  const currentMembership = useMemo(() => {
+    if (!team || !currentUserId) {
+      return null;
+    }
+    return team.memberships.find(member => member.userId === currentUserId) ?? null;
+  }, [team, currentUserId]);
+
+  const canInvite = Boolean(currentMembership?.roles?.includes("owner"));
+  const currentRoleLabel = currentMembership ? formatMembershipRole(currentMembership.roles) : null;
+
   useEffect(() => {
     if (createState.status === "success" || attachState.status === "success" || addMemberState.status === "success") {
       router.refresh();
     }
   }, [createState.status, attachState.status, addMemberState.status, router]);
+
+  useEffect(() => {
+    if (!canInvite) {
+      setSelectedUser(null);
+      setSearchTerm("");
+    }
+  }, [canInvite]);
 
   useEffect(() => {
     if (createState.status === "success") {
@@ -98,6 +128,13 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
   }, [team]);
 
   useEffect(() => {
+    if (!canInvite) {
+      setIsSearching(false);
+      setSearchResults([]);
+      setSearchError(null);
+      return;
+    }
+
     if (searchTerm.trim().length < 2) {
       setSearchResults([]);
       setSearchError(null);
@@ -142,7 +179,7 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
       clearTimeout(timer);
       controller.abort();
     };
-  }, [searchTerm, existingUserIds, currentUserId]);
+  }, [searchTerm, existingUserIds, currentUserId, canInvite]);
 
   return (
     <Card>
@@ -151,6 +188,11 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
         <p className="text-sm text-slate-600">
           Manage the Appwrite team that controls access to <strong>{walletName}</strong>.
         </p>
+        {currentRoleLabel ? (
+          <p className="text-xs text-slate-500">
+            Your role: <span className="font-medium text-slate-700">{currentRoleLabel}</span>
+          </p>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-6">
         {teamError ? (
@@ -162,6 +204,9 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs uppercase tracking-wide text-slate-500">
               Team ID: <span className="font-mono text-slate-700">{team.id}</span>
             </div>
+            <p className="text-xs text-slate-500">
+              <span className="font-semibold text-slate-700">Owners</span> can invite or remove members, <span className="font-semibold text-slate-700">Members</span> can manage wallets and log activity, and <span className="font-semibold text-slate-700">Viewers</span> have read-only access to reports.
+            </p>
             <form
               id="add-team-member-form"
               action={addMemberAction}
@@ -174,6 +219,11 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
                 <p className="text-xs text-slate-500">
                   Teammates need to sign up before they can be added. Search their email to link them instantly.
                 </p>
+                {!canInvite ? (
+                  <p className="text-xs font-medium text-amber-600">
+                    Only owners can invite new members. Contact the wallet owner to request changes.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="team-member-search">Search users</Label>
@@ -192,6 +242,7 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
                       }
                     }}
                     aria-invalid={Boolean(addMemberState.fieldErrors?.userId)}
+                    disabled={!canInvite}
                   />
                   {searchTerm ? (
                     <button
@@ -201,6 +252,7 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
                         setSelectedUser(null);
                       }}
                       className="absolute inset-y-0 right-2 flex items-center text-xs font-medium text-slate-500 hover:text-slate-700"
+                      disabled={!canInvite}
                     >
                       Clear
                     </button>
@@ -228,6 +280,7 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
                                 "flex w-full flex-col items-start gap-1 px-3 py-2 text-left transition hover:bg-slate-50",
                                 selectedUser?.id === result.id ? "bg-slate-100" : "bg-white"
                               )}
+                              disabled={!canInvite}
                             >
                               <span className="font-medium text-slate-700">{result.name}</span>
                               <span className="text-xs text-slate-500">{result.email}</span>
@@ -256,9 +309,9 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
                     defaultValue="member"
                     className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1"
                     aria-invalid={Boolean(addMemberState.fieldErrors?.role)}
+                    disabled={!canInvite}
                   >
                     <option value="owner">Owner</option>
-                    <option value="manager">Manager</option>
                     <option value="member">Member</option>
                     <option value="viewer">Viewer</option>
                   </select>
@@ -290,7 +343,7 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
                   {addMemberState.message}
                 </p>
               ) : null}
-              <SubmitButton label="Add member" disabled={!selectedUser} />
+              <SubmitButton label="Add member" disabled={!selectedUser || !canInvite} />
             </form>
 
             <div className="space-y-3">
@@ -320,7 +373,7 @@ export function WalletTeamManager({ walletId, walletName, team, teamError, curre
                               <span className="text-xs text-slate-500">{member.userEmail ?? "Awaiting acceptance"}</span>
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-slate-600">{member.roles.join(", ") || "member"}</td>
+                          <td className="px-3 py-2 text-slate-600">{formatMembershipRole(member.roles)}</td>
                           <td className="px-3 py-2">
                             <span
                               className={cn(
