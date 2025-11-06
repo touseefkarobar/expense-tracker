@@ -111,7 +111,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <>
           <StatsGrid totals={snapshot.totals} currency={currency} />
 
-          <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.9fr)]">
+          <section className="grid gap-6 ">
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-slate-900">Record a transaction</h2>
@@ -183,7 +183,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             </div>
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.9fr)]">
+          <section className="grid gap-6 ">
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-slate-900">Recent transactions</h2>

@@ -25,7 +25,7 @@ function SubmitButton() {
   return (
     <button
       type="submit"
-      className={cn(buttonVariants({ variant: "secondary" }), "w-full sm:w-auto")}
+      className={cn(buttonVariants({ variant: "subtle" }), "w-full sm:w-auto")}
       disabled={pending}
     >
       {pending ? "Saving..." : "Add category"}
