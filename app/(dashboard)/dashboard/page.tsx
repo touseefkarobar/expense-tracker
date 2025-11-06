@@ -10,6 +10,8 @@ import { CreateWalletForm } from "./_components/create-wallet-form";
 import { StatsGrid } from "./_components/stats-grid";
 import { TransactionsTable } from "./_components/transactions-table";
 import { WalletSelector } from "./_components/wallet-selector";
+import { WalletTeamManager } from "./_components/wallet-team-manager";
+import { getCategoryIcon } from "./_components/category-metadata";
 
 export const metadata: Metadata = {
   title: "Dashboard | Shared Wallet Expense Tracker"
@@ -40,7 +42,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       categories: [],
       transactions: [],
       totals: { income: 0, expenses: 0, net: 0 },
-      categorySummaries: []
+      categorySummaries: [],
+      team: null,
+      teamError: null
     };
   }
 
@@ -50,24 +54,34 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <Shell className="space-y-10 py-12">
-      <section className="space-y-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h1 className="text-3xl font-semibold text-slate-900">Shared wallet control centre</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              Track income, expenses, and categories backed by Appwrite documents. Switch between wallets your team
-              owns, or create a new one below.
-            </p>
+      <section className="space-y-6">
+        <div className="overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 p-8 text-white shadow-lg">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-3">
+              <h1 className="text-3xl font-semibold">Shared wallet control centre</h1>
+              <p className="text-sm text-slate-200">
+                Track income, expenses, categories, and team access from a single dashboard powered by Appwrite.
+              </p>
+              <div className="grid gap-2 text-xs text-slate-300 sm:grid-cols-3">
+                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                  <p className="font-semibold text-white">1. Create</p>
+                  <p>Spin up a wallet for your group.</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                  <p className="font-semibold text-white">2. Categorise</p>
+                  <p>Design income & expense categories with colours and icons.</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                  <p className="font-semibold text-white">3. Collaborate</p>
+                  <p>Invite teammates to log transactions together.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3">
+              <span className="text-xs uppercase tracking-wide text-slate-300">Active wallet</span>
+              <WalletSelector wallets={snapshot.wallets} activeWalletId={snapshot.activeWalletId} />
+            </div>
           </div>
-          <WalletSelector wallets={snapshot.wallets} activeWalletId={snapshot.activeWalletId} />
-        </div>
-        <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 px-5 py-4 text-sm text-slate-600">
-          <p className="font-semibold text-slate-800">Workspace quickstart</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-4">
-            <li>Create a wallet for your group (or switch to an existing one).</li>
-            <li>Add income and expense categories.</li>
-            <li>Record transactions to populate the analytics on this page.</li>
-          </ol>
         </div>
       </section>
 
@@ -97,7 +111,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <>
           <StatsGrid totals={snapshot.totals} currency={currency} />
 
-          <section className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.9fr)]">
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-slate-900">Record a transaction</h2>
@@ -113,48 +127,63 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 />
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader>
-                <h2 className="text-lg font-semibold text-slate-900">Categories</h2>
-                <p className="text-sm text-slate-600">
-                  Categories help classify both income and expenses. They feed the summary and charting widgets.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <CreateCategoryForm walletId={snapshot.activeWalletId!} />
-                <div className="space-y-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    Existing categories
-                  </h3>
-                  {snapshot.categories.length === 0 ? (
-                    <p className="rounded-lg border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">
-                      No categories yet. Create one to get started.
-                    </p>
-                  ) : (
-                    <ul className="grid gap-2 text-sm sm:grid-cols-2">
-                      {snapshot.categories.map(category => (
-                        <li
-                          key={category.$id}
-                          className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2"
-                        >
-                          <span className="text-slate-700">{category.name}</span>
-                          <span
-                            className={`text-xs font-semibold uppercase ${
-                              category.type === "income" ? "text-emerald-600" : "text-rose-600"
-                            }`}
-                          >
-                            {category.type}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <h2 className="text-lg font-semibold text-slate-900">Categories</h2>
+                  <p className="text-sm text-slate-600">
+                    Categories help classify both income and expenses. They feed the summary and charting widgets.
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <CreateCategoryForm walletId={snapshot.activeWalletId!} />
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Existing categories
+                    </h3>
+                    {snapshot.categories.length === 0 ? (
+                      <p className="rounded-lg border border-dashed border-slate-200 px-4 py-3 text-sm text-slate-500">
+                        No categories yet. Create one to get started.
+                      </p>
+                    ) : (
+                      <ul className="grid gap-2 text-sm sm:grid-cols-2">
+                        {snapshot.categories.map(category => {
+                          const Icon = getCategoryIcon(category.icon);
+                          return (
+                            <li
+                              key={category.$id}
+                              className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/60"
+                                  style={{ backgroundColor: category.color ?? "rgba(148, 163, 184, 0.15)" }}
+                                >
+                                  <Icon className="h-4 w-4 text-slate-700" aria-hidden="true" />
+                                </span>
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-slate-700">{category.name}</span>
+                                  <span className="text-xs uppercase tracking-wide text-slate-400">{category.type}</span>
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+              <WalletTeamManager
+                walletId={snapshot.activeWalletId!}
+                walletName={activeWallet?.name ?? "Wallet"}
+                team={snapshot.team}
+                teamError={snapshot.teamError}
+              />
+            </div>
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.9fr)]">
             <Card>
               <CardHeader>
                 <h2 className="text-lg font-semibold text-slate-900">Recent transactions</h2>
@@ -167,6 +196,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   walletId={snapshot.activeWalletId!}
                   currency={currency}
                   transactions={snapshot.transactions}
+                  categories={snapshot.categories}
                 />
               </CardContent>
             </Card>

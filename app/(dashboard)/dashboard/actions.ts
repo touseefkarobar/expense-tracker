@@ -13,6 +13,11 @@ import {
   createWallet,
   deleteTransaction
 } from "@/lib/server/finance-service";
+import {
+  attachExistingTeamToWallet,
+  createTeamForWallet,
+  inviteTeamMemberToWallet
+} from "@/lib/server/team-service";
 import type { ActionState } from "./types";
 
 const walletSchema = z.object({
@@ -30,8 +35,14 @@ const categorySchema = z.object({
   walletId: z.string().min(1, "Missing wallet id."),
   name: z.string().min(2, "Name must be at least 2 characters."),
   type: z.enum(["expense", "income"], { required_error: "Choose category type." }),
-  color: z.string().optional().or(z.literal("")),
-  icon: z.string().optional().or(z.literal(""))
+  color: z
+    .string()
+    .optional()
+    .or(z.literal(""))
+    .refine(value => !value || /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(value), {
+      message: "Use a valid hex color like #22c55e."
+    }),
+  icon: z.string().max(64, "Icon name is too long.").optional().or(z.literal(""))
 });
 
 const transactionSchema = z.object({
@@ -55,6 +66,26 @@ const transactionSchema = z.object({
 const deleteTransactionSchema = z.object({
   walletId: z.string().min(1),
   transactionId: z.string().min(1)
+});
+
+const createTeamSchema = z.object({
+  walletId: z.string().min(1, "Missing wallet id."),
+  teamName: z.string().min(2, "Team name must be at least 2 characters.")
+});
+
+const attachTeamSchema = z.object({
+  walletId: z.string().min(1, "Missing wallet id."),
+  teamId: z.string().min(1, "Enter an Appwrite team ID.")
+});
+
+const inviteMemberSchema = z.object({
+  walletId: z.string().min(1, "Missing wallet id."),
+  email: z.string().email("Enter a valid email address."),
+  name: z.string().optional().or(z.literal("")),
+  role: z.enum(["owner", "manager", "member", "viewer"], {
+    required_error: "Choose a role."
+  }),
+  redirectUrl: z.string().url("Provide a valid invite URL.")
 });
 
 function mapZodErrors(error: z.ZodError): Record<string, string> {
@@ -191,5 +222,92 @@ export async function deleteTransactionAction(formData: FormData): Promise<void>
   } finally {
     revalidatePath("/dashboard");
     redirect(`/dashboard?wallet=${parsed.data.walletId}`);
+  }
+}
+
+export async function createWalletTeamAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = createTeamSchema.safeParse({
+    walletId: formData.get("walletId"),
+    teamName: formData.get("teamName")
+  });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted fields and retry.",
+      fieldErrors: mapZodErrors(parsed.error)
+    };
+  }
+
+  try {
+    await createTeamForWallet(parsed.data);
+    revalidatePath("/dashboard");
+    return { status: "success", message: "Team created and linked to wallet." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to create team."
+    };
+  }
+}
+
+export async function attachTeamToWalletAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = attachTeamSchema.safeParse({
+    walletId: formData.get("walletId"),
+    teamId: formData.get("teamId")
+  });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted fields and retry.",
+      fieldErrors: mapZodErrors(parsed.error)
+    };
+  }
+
+  try {
+    await attachExistingTeamToWallet(parsed.data);
+    revalidatePath("/dashboard");
+    return { status: "success", message: "Team linked to wallet." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to link team."
+    };
+  }
+}
+
+export async function inviteTeamMemberAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = inviteMemberSchema.safeParse({
+    walletId: formData.get("walletId"),
+    email: formData.get("email"),
+    name: formData.get("name"),
+    role: formData.get("role"),
+    redirectUrl: formData.get("redirectUrl")
+  });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Fix the highlighted fields and retry.",
+      fieldErrors: mapZodErrors(parsed.error)
+    };
+  }
+
+  try {
+    await inviteTeamMemberToWallet({
+      walletId: parsed.data.walletId,
+      email: parsed.data.email,
+      name: parsed.data.name || null,
+      role: parsed.data.role,
+      redirectUrl: parsed.data.redirectUrl
+    });
+    revalidatePath("/dashboard");
+    return { status: "success", message: "Invite sent." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Unable to send invite."
+    };
   }
 }

@@ -1,7 +1,7 @@
 import { AppwriteException, ID, Models, Query } from "node-appwrite";
 import { cache } from "react";
 
-import { databases } from "./appwrite";
+import { databases, teams } from "./appwrite";
 import { DATABASE_ID } from "./database-schema";
 
 type AppwriteDocument<T> = T &
@@ -57,6 +57,11 @@ export interface DashboardSnapshot {
   transactions: (TransactionDocument & { categoryName: string | null })[];
   totals: DashboardTotals;
   categorySummaries: CategorySummary[];
+  team: {
+    id: string;
+    memberships: Models.Membership[];
+  } | null;
+  teamError: string | null;
 }
 
 const COLLECTIONS = {
@@ -120,6 +125,35 @@ async function listTransactions(walletId: string): Promise<TransactionDocument[]
   }
 }
 
+async function getWallet(walletId: string): Promise<WalletDocument> {
+  try {
+    const document = await databases.getDocument<WalletDocument>(
+      DATABASE_ID,
+      COLLECTIONS.wallets,
+      walletId
+    );
+    return document;
+  } catch (error) {
+    throw new Error(`Unable to load wallet: ${formatAppwriteError(error)}`);
+  }
+}
+
+async function assignWalletTeamId(walletId: string, teamId: string): Promise<WalletDocument> {
+  try {
+    const document = await databases.updateDocument<WalletDocument>(
+      DATABASE_ID,
+      COLLECTIONS.wallets,
+      walletId,
+      {
+        owner_team_id: teamId
+      }
+    );
+    return document;
+  } catch (error) {
+    throw new Error(`Unable to link team to wallet: ${formatAppwriteError(error)}`);
+  }
+}
+
 export const getDashboardSnapshot = cache(async (walletId?: string | null): Promise<DashboardSnapshot> => {
   const wallets = await listWallets();
   const activeWalletId = walletId ?? wallets[0]?.$id ?? null;
@@ -131,9 +165,13 @@ export const getDashboardSnapshot = cache(async (walletId?: string | null): Prom
       categories: [],
       transactions: [],
       totals: { income: 0, expenses: 0, net: 0 },
-      categorySummaries: []
+      categorySummaries: [],
+      team: null,
+      teamError: null
     };
   }
+
+  const activeWallet = wallets.find(wallet => wallet.$id === activeWalletId);
 
   const [categories, transactions] = await Promise.all([
     listCategories(activeWalletId),
@@ -185,13 +223,27 @@ export const getDashboardSnapshot = cache(async (walletId?: string | null): Prom
 
   const categorySummaries = Array.from(categoryTotals.values()).sort((a, b) => b.total - a.total);
 
+  let team: DashboardSnapshot["team"] = null;
+  let teamError: string | null = null;
+
+  if (activeWallet?.owner_team_id) {
+    try {
+      const memberships = await teams.listMemberships(activeWallet.owner_team_id);
+      team = { id: activeWallet.owner_team_id, memberships: memberships.memberships };
+    } catch (error) {
+      teamError = `Unable to load team members: ${formatAppwriteError(error)}`;
+    }
+  }
+
   return {
     wallets,
     activeWalletId,
     categories,
     transactions: augmentedTransactions,
     totals,
-    categorySummaries
+    categorySummaries,
+    team,
+    teamError
   };
 });
 
@@ -221,6 +273,14 @@ export async function createWallet(input: CreateWalletInput): Promise<WalletDocu
   } catch (error) {
     throw new Error(`Unable to create wallet: ${formatAppwriteError(error)}`);
   }
+}
+
+export async function linkWalletToTeam(walletId: string, teamId: string): Promise<WalletDocument> {
+  return assignWalletTeamId(walletId, teamId);
+}
+
+export async function fetchWallet(walletId: string): Promise<WalletDocument> {
+  return getWallet(walletId);
 }
 
 export interface CreateCategoryInput {
