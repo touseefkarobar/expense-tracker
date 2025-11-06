@@ -3,14 +3,13 @@
 import { cookies } from "next/headers";
 import { ID, account } from "@/lib/server/appwrite";
 import { z } from "zod";
+import { SESSION_COOKIE_NAME } from "./auth-constants";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, "Password must be at least 8 characters."),
   name: z.string().min(1).optional()
 });
-
-export const SESSION_COOKIE_NAME = "appwrite-session" as const;
 
 function setSessionCookie(secret: string) {
   cookies().set(SESSION_COOKIE_NAME, secret, {

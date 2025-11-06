@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-import { SESSION_COOKIE_NAME } from "@/lib/server/auth-actions";
+import { SESSION_COOKIE_NAME } from "@/lib/server/auth-constants";
 import { env } from "@/lib/env";
 
 export interface SessionAccount {
