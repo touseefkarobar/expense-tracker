@@ -18,6 +18,7 @@ interface CreateTransactionFormProps {
   categories: CategoryDocument[];
   currency: string;
   defaultMerchant?: string;
+  initialType?: "expense" | "income";
 }
 
 function SubmitButton() {
@@ -40,10 +41,10 @@ const todayLocal = () => {
   return local.toISOString().slice(0, 10);
 };
 
-export function CreateTransactionForm({ walletId, categories, currency, defaultMerchant }: CreateTransactionFormProps) {
+export function CreateTransactionForm({ walletId, categories, currency, defaultMerchant, initialType = "expense" }: CreateTransactionFormProps) {
   const router = useRouter();
   const [state, formAction] = useFormState(createTransactionAction, initialState);
-  const [transactionType, setTransactionType] = useState<"expense" | "income">("expense");
+  const [transactionType, setTransactionType] = useState<"expense" | "income">(initialType);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
 
   useEffect(() => {
@@ -58,11 +59,16 @@ export function CreateTransactionForm({ walletId, categories, currency, defaultM
       if (merchant) {
         merchant.value = defaultMerchant ?? "";
       }
-      setTransactionType("expense");
+      setTransactionType(initialType);
       setSelectedCategory("");
       router.refresh();
     }
-  }, [state.status, router, defaultMerchant]);
+  }, [state.status, router, defaultMerchant, initialType]);
+
+  useEffect(() => {
+    setTransactionType(initialType);
+    setSelectedCategory("");
+  }, [initialType]);
 
   const expenseCategories = categories.filter(category => category.type === "expense");
   const incomeCategories = categories.filter(category => category.type === "income");
