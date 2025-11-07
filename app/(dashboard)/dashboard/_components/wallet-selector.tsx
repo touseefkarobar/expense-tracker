@@ -27,7 +27,8 @@ export function WalletSelector({ wallets, activeWalletId, basePath = "/dashboard
 
     startTransition(() => {
       const query = params.toString();
-      router.push(query ? `${basePath}?${query}` : basePath);
+      const url = query ? `${basePath}?${query}` : basePath;
+      router.push(url as any);
     });
   }
 

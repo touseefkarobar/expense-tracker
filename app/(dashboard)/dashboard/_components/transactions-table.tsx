@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import { format } from "date-fns";
 
 import type { CategoryDocument, TransactionDocument } from "@/lib/server/finance-service";
 import { buttonVariants } from "@/lib/utils/button-variants";
@@ -174,7 +175,7 @@ export function TransactionsTable({ walletId, currency, transactions, categories
                   <tr className={cn("align-top transition", isEditing ? "bg-slate-50" : "hover:bg-slate-50/60")}
                   >
                     <td className="px-4 py-3 text-slate-600">
-                      {new Date(transaction.occurred_at).toLocaleDateString()}
+                      {format(new Date(transaction.occurred_at), "MMM d, yyyy")}
                     </td>
                     <td className="px-4 py-3">
                       <span
