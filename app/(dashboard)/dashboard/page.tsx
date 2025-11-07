@@ -63,6 +63,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         activeWallet={activeWallet}
         currency={currency}
         currentUserName={currentUserName}
+        currentUserId={currentUser.id}
         loadError={loadError}
         logoutControl={<DashboardLogoutButton />}
       />
