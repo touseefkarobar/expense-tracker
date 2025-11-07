@@ -6,8 +6,6 @@ import { fontSans } from "@/lib/utils/fonts";
 import { ReactQueryProvider } from "@/lib/providers/react-query-provider";
 import { ThemeProvider } from "@/lib/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
-import AppHeader from "@/components/layout/app-header";
-import AppFooter from "@/components/layout/app-footer";
 
 export const metadata: Metadata = {
   title: "Shared Wallet Expense Tracker",
@@ -23,16 +21,16 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
-          "min-h-screen bg-white text-slate-900 antialiased",
+          "min-h-screen bg-slate-100 text-slate-900 antialiased",
           fontSans.variable
         )}
       >
         <ReactQueryProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <div className="flex min-h-screen flex-col">
-              <AppHeader />
-              <main className="flex-1">{children}</main>
-              <AppFooter />
+            <div className="flex min-h-screen w-full justify-center bg-slate-200/40 px-4 py-8">
+              <main className="flex w-full max-w-[420px] flex-1 flex-col">
+                {children}
+              </main>
             </div>
             <Toaster />
           </ThemeProvider>
