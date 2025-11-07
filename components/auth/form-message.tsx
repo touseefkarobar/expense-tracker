@@ -12,10 +12,10 @@ export function FormMessage({ message, variant = "error" }: FormMessageProps) {
   return (
     <p
       className={cn(
-        "rounded-md border px-3 py-2 text-sm",
+        "rounded-xl border px-3 py-2 text-xs font-medium",
         variant === "success"
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-          : "border-rose-200 bg-rose-50 text-rose-700"
+          ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+          : "border-rose-400/40 bg-rose-400/10 text-rose-100"
       )}
     >
       {message}
