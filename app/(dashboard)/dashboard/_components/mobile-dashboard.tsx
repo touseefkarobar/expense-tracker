@@ -576,12 +576,11 @@ function CategoriesList({
               >
                 <Icon className="h-5 w-5 text-slate-700" aria-hidden="true" />
               </span>
-              <div className="flex flex-col">
+            <div className="flex flex-col">
                 <span className="font-medium text-slate-800">{category.name}</span>
                 <span className="text-xs uppercase tracking-wide text-slate-500">{category.type}</span>
               </div>
             </div>
-            <span className="text-xs uppercase tracking-wide text-slate-400">{category.slug}</span>
           </li>
         );
       })}
