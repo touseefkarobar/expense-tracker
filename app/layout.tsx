@@ -27,7 +27,7 @@ export default function RootLayout({
       >
         <ReactQueryProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <div className="flex min-h-screen w-full justify-center bg-slate-200/40 px-4 py-8">
+            <div className="flex min-h-screen w-full justify-center bg-slate-200/40">
               <main className="flex w-full max-w-[420px] flex-1 flex-col">
                 {children}
               </main>

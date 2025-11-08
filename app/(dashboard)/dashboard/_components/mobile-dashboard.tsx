@@ -223,14 +223,14 @@ export function MobileDashboard({
   ];
 
   return (
-    <div className="flex w-full justify-center bg-slate-900 px-2 py-6 sm:px-6">
+    <div className="flex w-full justify-center bg-slate-900 py-4">
       <div className="w-full max-w-sm space-y-3">
         {loadError ? (
           <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm font-medium text-rose-100">
             {loadError}
           </div>
         ) : null}
-        <div className="overflow-hidden rounded-[32px] bg-black text-white shadow-[0_35px_60px_-15px_rgba(0,0,0,0.9)] ring-1 ring-white/10">
+        <div className="overflow-hidden text-white ">
           {screen === "overview" ? (
             <OverviewScreen
               formatter={formatter}
@@ -332,17 +332,17 @@ function OverviewScreen({
   const netLabel = totals.net >= 0 ? "You are in surplus" : "Spending is over income";
 
   return (
-    <div className="grid min-h-[640px] grid-cols-3 grid-flow-dense gap-3 bg-black px-5 py-5 text-white">
+    <div className="grid min-h-[640px] grid-cols-3 grid-flow-dense gap-3 text-white">
       <MetroTile color="bg-sky-500" colSpan={2} rowSpan={2}>
         <div className="flex h-full flex-col justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-white/80">
             <Wallet2 className="h-5 w-5" aria-hidden="true" />
-            <span>Account</span>
+            <span className="text-xs">Account</span>
           </div>
           <div className="space-y-1">
-            <p className="text-3xl font-semibold">{formatter.format(totals.net)}</p>
+            <p className="text-2xl font-semibold">{formatter.format(totals.net)}</p>
             <p className="text-sm text-white/80">{walletName ?? "No wallet selected"}</p>
-            <p className="text-xs text-white/70">{currentUserName ? `Owner: ${currentUserName}` : "Invite teammates"}</p>
+           
           </div>
         </div>
       </MetroTile>
@@ -354,11 +354,11 @@ function OverviewScreen({
         onClick={() => onComposer("transaction", { transactionType: "income" })}
       >
         <div className="flex h-full flex-col justify-between">
-          <div className="flex items-center justify-between text-sm font-semibold uppercase tracking-wide text-white/80">
-            <span>Income</span>
-            <Plus className="h-4 w-4" aria-hidden="true" />
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-white/80">
+            <span className="text-xs">Income</span>
+            {/* <Plus className="h-4 w-4" aria-hidden="true" /> */}
           </div>
-          <p className="text-2xl font-semibold">{formatter.format(totals.income)}</p>
+          <p className="text-sm font-semibold">{formatter.format(totals.income)}</p>
         </div>
       </MetroTile>
 
@@ -369,11 +369,11 @@ function OverviewScreen({
         onClick={() => onComposer("transaction", { transactionType: "expense" })}
       >
         <div className="flex h-full flex-col justify-between">
-          <div className="flex items-center justify-between text-sm font-semibold uppercase tracking-wide text-white/80">
-            <span>Expenses</span>
-            <Minus className="h-4 w-4" aria-hidden="true" />
+          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-white/80">
+            <span className="text-xs">Expenses</span>
+            {/* <Minus className="h-4 w-4" aria-hidden="true" /> */}
           </div>
-          <p className="text-2xl font-semibold">{formatter.format(Math.abs(totals.expenses))}</p>
+          <p className="text-sm font-semibold">{formatter.format(Math.abs(totals.expenses))}</p>
         </div>
       </MetroTile>
 
